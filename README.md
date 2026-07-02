@@ -41,10 +41,11 @@ backend from any origin.
 ## Repository layout
 
 ```
-(this repo, main branch)          ← superproject — only .gitmodules + README
+(this repo, main branch)          ← superproject — only .gitmodules + README + scripts
 ├── backend/   → branch: backend  Bun HTTP server · server.js · zero npm deps
 ├── frontend/  → branch: frontend Angular 19 SPA  · src/app/  · signals
-└── cli/       → branch: cli      Node CLI        · cli.js    · zero npm deps
+├── cli/       → branch: cli      Node CLI        · cli.js    · zero npm deps
+└── bundle/    → branch: bundle   GENERATED output assembled by scripts/build-bundle.mjs
 ```
 
 Each branch has its own `README.md` with full details on that layer.
@@ -163,3 +164,43 @@ git add backend frontend cli
 git commit -m "chore: bump all submodule pointers"
 git push
 ```
+
+---
+
+## Bundle (generated release artefact)
+
+`bundle/` is a **generated** Git submodule on the `bundle` branch. Do not
+hand-edit it. It is assembled by `scripts/build-bundle.mjs` and contains:
+
+| File | Description |
+|------|-------------|
+| `server.js` | backend entry point (copied verbatim) |
+| `cli.js` | CLI entry point (copied verbatim) |
+| `public/` | Angular production build output |
+| `.env` | `PUBLIC_DIR=./public` — switches the server into SPA-hosting mode |
+| `package.json` | `"start": "bun server.js"` (no `"type"` field) |
+| `Dockerfile` | `FROM oven/bun:1-alpine` single-file deploy image |
+| `.dockerignore` | excludes `.git` and `*.md` from the image |
+| `railway.json` | selects the `DOCKERFILE` builder on Railway |
+
+### Assemble a new bundle
+
+Requires: **Node ≥ 18**, **Bun**, **npm**.
+
+```sh
+# Build + commit (no push)
+node scripts/build-bundle.mjs
+
+# Build + commit + push to remote (bundle branch and main)
+node scripts/build-bundle.mjs --push
+```
+
+The script is a **safe no-op** when nothing has changed: it checks
+`git diff --cached --stat` before committing and skips the commit if the
+stage is empty.
+
+### Deploy on Railway
+
+1. Connect your GitHub repo on Railway, select the `bundle` branch.
+2. Railway auto-detects `railway.json` and builds the `Dockerfile`.
+3. Set `PORT` and `BASE_URL` (or `RAILWAY_PUBLIC_DOMAIN`) as Railway env vars.
