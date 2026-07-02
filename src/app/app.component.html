@@ -1,0 +1,59 @@
+﻿<main>
+  <header>
+    <h1>Snip</h1>
+    <p>Paste a long URL, get a short one.</p>
+  </header>
+
+  <section class="form-section">
+    <form (submit)="$event.preventDefault(); submit()">
+      <input
+        type="url"
+        placeholder="https://example.com/a/very/long/url"
+        autocomplete="off"
+        [value]="inputUrl()"
+        (input)="inputUrl.set($any($event.target).value)"
+        required
+      />
+      <button type="submit" [disabled]="busy()">
+        {{ busy() ? 'Shortening…' : 'Shorten' }}
+      </button>
+    </form>
+
+    @if (formError()) {
+      <p class="error">{{ formError() }}</p>
+    }
+
+    @if (lastCreated(); as link) {
+      <div class="result">
+        <span>Short link:</span>
+        <a [href]="link.shortUrl" target="_blank" rel="noopener">{{ link.shortUrl }}</a>
+      </div>
+    }
+  </section>
+
+  @if (allLinks().length) {
+    <section class="table-section">
+      <h2>All links</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Original URL</th>
+            <th>Hits</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (link of allLinks(); track link.code) {
+            <tr>
+              <td><a [href]="link.shortUrl" target="_blank" rel="noopener">{{ link.code }}</a></td>
+              <td class="url-cell" [title]="link.url">{{ link.url }}</td>
+              <td>{{ link.hits }}</td>
+              <td>{{ link.createdAt | date:'short' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </section>
+  }
+</main>
