@@ -1,0 +1,40 @@
+name: Build bundle
+
+# Runs on an hourly schedule and can be triggered manually.
+#
+# NOTE: A push trigger is intentionally omitted. GitHub executes push-triggered
+# workflows from the version of the workflow file that lives on the *pushed*
+# branch. Because this file exists only on `main`, a push to `backend`,
+# `frontend`, or `cli` would never invoke it. The schedule + workflow_dispatch
+# combination achieves the same goal without that footgun.
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # top of every hour
+  workflow_dispatch:
+
+permissions:
+  contents: write   # push bundle branch and bump main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          submodules: true
+          fetch-depth: 0          # full history so `git push origin main` is fast-forward
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Build and push bundle
+        run: node scripts/build-bundle.mjs --push
